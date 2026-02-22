@@ -46,6 +46,7 @@ export interface Message {
   thoughts?: string; // Model's thinking text (for display only, not included in history)
   thought_signature?: string; // Opaque signature for reusing thoughts in subsequent requests
   thinking_duration?: number; // Duration in seconds the model spent thinking
+  feedback?: number | null; // User feedback rating: 1 for good, -1 for bad
   created_at: string;
 }
 

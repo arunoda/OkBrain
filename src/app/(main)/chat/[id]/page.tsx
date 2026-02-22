@@ -31,7 +31,9 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
       sources: msg.sources || undefined,
       wasGrounded: msg.was_grounded === 1,
       thoughts: msg.thoughts || undefined,
-      thinking_duration: msg.thinking_duration || undefined
+      thinking_duration: msg.thinking_duration || undefined,
+      feedback: msg.feedback ?? null,
+      created_at: msg.created_at
     }));
 
   const docs = await getConversationDocuments(session.userId, conversationId);

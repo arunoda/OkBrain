@@ -252,6 +252,27 @@ export async function getMessage(
   return (result as Message | undefined) || null;
 }
 
+export async function updateMessageFeedback(
+  dbWrapper: DbWrapper,
+  ensureInitialized: () => Promise<void>,
+  userId: string,
+  id: string,
+  feedback: number | null
+): Promise<void> {
+  await ensureInitialized();
+
+  // Verify message belongs to user
+  const message = await getMessage(dbWrapper, ensureInitialized, id);
+  if (!message) throw new Error("Message not found");
+
+  const conv = await getConversation(dbWrapper, ensureInitialized, userId, message.conversation_id);
+  if (!conv) throw new Error("Unauthorized to update message feedback");
+
+  await dbWrapper.prepare(`
+    UPDATE messages SET feedback = ? WHERE id = ?
+  `).run(feedback, id);
+}
+
 export async function deleteMessage(
   dbWrapper: DbWrapper,
   ensureInitialized: () => Promise<void>,

@@ -184,6 +184,10 @@ export async function deleteMessage(userId: string, id: string) {
   return conversationOps.deleteMessage(dbWrapper, ensureInitialized, userId, id);
 }
 
+export async function updateMessageFeedback(userId: string, id: string, feedback: number | null) {
+  return conversationOps.updateMessageFeedback(dbWrapper, ensureInitialized, userId, id, feedback);
+}
+
 export async function deleteConversationMessages(userId: string, conversationId: string) {
   return conversationOps.deleteConversationMessages(dbWrapper, ensureInitialized, userId, conversationId);
 }

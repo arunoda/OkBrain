@@ -148,7 +148,16 @@ export function buildGroundingReminder(): string {
  * Build upcoming events context prompt
  */
 export function buildEventsContextPrompt(eventsContext: string): string {
-  return `UPCOMING EVENTS:\n${eventsContext}\n\nIMPORTANT DISPLAY RULES:\n- All event times above are in UTC (ISO 8601 format with Z suffix)\n- When showing events to the user, convert these UTC times to their local timezone based on their location\n- Display times in natural, user-friendly format (e.g., "Tuesday, Feb 3 at 3:00 PM")\n- Do NOT show event IDs, UTC times, or timezone abbreviations unless specifically requested\n- Do not explicitly mention that you are reading from an events list unless relevant`;
+  return `UPCOMING EVENTS (next few only — there may be more events beyond these):
+${eventsContext}
+
+IMPORTANT DISPLAY RULES:
+- All event times above are in UTC (ISO 8601 format with Z suffix)
+- When showing events to the user, convert these UTC times to their local timezone based on their location
+- Display times in natural, user-friendly format (e.g., "Tuesday, Feb 3 at 3:00 PM")
+- Do NOT show event IDs, UTC times, or timezone abbreviations unless specifically requested
+- Do not explicitly mention that you are reading from an events list unless relevant
+- These are only the nearest upcoming events, NOT the complete list. There may be additional events after the last one shown. If the user asks about events beyond this range, use the event tools (get_upcoming_events, get_events_by_date_range, search_events) to fetch more.`;
 }
 
 /**

@@ -8,6 +8,7 @@
 // Import all providers to trigger registration
 import './google';
 import './xai';
+import './anthropic';
 
 // Re-export registry for convenience
 export { registry } from '../registry';

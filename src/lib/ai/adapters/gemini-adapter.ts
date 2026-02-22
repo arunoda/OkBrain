@@ -220,8 +220,14 @@ export class GeminiProvider implements AIProvider {
     client: GoogleGenAI,
     recursionDepth = 0
   ): Promise<void> {
-    if (recursionDepth > 5) {
-      console.warn("Gemini tool recursion limit reached");
+    const MAX_TOOL_DEPTH = 10;
+
+    console.log(`[GeminiAdapter] Tool loop depth=${recursionDepth}, model=${this.modelName}`);
+
+    if (recursionDepth > MAX_TOOL_DEPTH) {
+      // Safety net — should not normally be reached since we handle MAX_TOOL_DEPTH below
+      console.error(`[GeminiAdapter] Unexpected recursion depth ${recursionDepth} exceeded MAX_TOOL_DEPTH ${MAX_TOOL_DEPTH}`);
+      await onChunk({ text: "", done: true });
       return;
     }
 
@@ -255,11 +261,19 @@ export class GeminiProvider implements AIProvider {
 
     const isThinkingModel = this.modelName.includes('thinking');
     const isGemini3 = this.modelName.includes('gemini-3');
+    const isFinalDepth = recursionDepth === MAX_TOOL_DEPTH;
+
+    // On the final allowed depth, force a text response by removing tools and instructing the model to wrap up
+    let effectiveSystemInstruction = systemInstruction;
+    if (isFinalDepth) {
+      console.warn(`[GeminiAdapter] Final tool call depth (${MAX_TOOL_DEPTH}) reached — disabling tools to force text response`);
+      effectiveSystemInstruction += "\n\nIMPORTANT: You have used the maximum allowed number of tool calls. Provide your best answer using the information already gathered. If you couldn't find something specific, tell the user clearly what you were and weren't able to find.";
+    }
 
     // Thinking models do NOT support tools yet (experimental ones)
     // But Flash 3 likely supports tools.
     const config: any = {
-      systemInstruction,
+      systemInstruction: effectiveSystemInstruction,
       maxOutputTokens: 8192,
     };
 
@@ -271,7 +285,8 @@ export class GeminiProvider implements AIProvider {
     }
 
     // Explicitly keeping tools undefined for experimental thinking models that don't support them
-    if (isThinkingModel) {
+    // Also strip tools on the final depth to force a text response
+    if (isThinkingModel || isFinalDepth) {
       // Do nothing, tools remain undefined
     } else {
       if (tools.length > 0) {
@@ -315,7 +330,7 @@ export class GeminiProvider implements AIProvider {
     while (!iterResult.done) {
       const chunk = iterResult.value;
       if (options?.signal?.aborted) {
-        console.log("Gemini stream aborted by signal");
+        console.log(`[GeminiAdapter] Stream aborted by user stop signal at depth=${recursionDepth}`);
         return;
       }
 
@@ -423,6 +438,7 @@ export class GeminiProvider implements AIProvider {
         return;
       }
 
+      console.log(`[GeminiAdapter] Tool call detected: ${toolName} at depth=${recursionDepth}`);
       const statusMessage = getToolStatusMessage(toolName);
       await onChunk({ text: "", done: false, status: statusMessage });
 

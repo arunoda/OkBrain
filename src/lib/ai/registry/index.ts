@@ -59,6 +59,7 @@ class Registry {
       providerName: provider.name,
       apiModel: config.apiModel,
       fallbackModels: config.fallbackModels,
+      uiPriority: config.uiPriority ?? 0,
       capabilities,
       ui,
       createAdapter: (options?: AdapterOptions) => provider.createAdapter(config, options),
@@ -76,7 +77,7 @@ class Registry {
    * Get all registered models
    */
   getAllModels(): ResolvedModel[] {
-    return Array.from(this.models.values());
+    return Array.from(this.models.values()).sort((a, b) => b.uiPriority - a.uiPriority);
   }
 
   /**

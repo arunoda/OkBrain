@@ -58,8 +58,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Validate provider
-    if (aiProvider !== 'gemini' && aiProvider !== 'gemini-pro' && aiProvider !== 'xai') {
+    // Validate provider using the registry
+    const { isValidModelId } = await import("@/lib/ai");
+    if (!isValidModelId(aiProvider)) {
       return new Response(JSON.stringify({ error: "Invalid AI provider" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },

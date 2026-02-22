@@ -9,7 +9,6 @@ import { AIProvider, AIMessage, AIStreamChunk, AIGenerateOptions } from '../type
 // Model capabilities
 export interface ModelCapabilities {
   thinking: boolean;
-  thinkingLevels: ('low' | 'high')[];
   tools: boolean;
   toolsDuringThinking: boolean;
   fileUpload: boolean;
@@ -44,6 +43,7 @@ export interface ModelConfig {
   name: string;
   apiModel: string;
   fallbackModels?: string[];
+  uiPriority?: number; // Higher number = appears first in UI (like z-index). Default: 0
   capabilities: Partial<ModelCapabilities>;
   ui?: Partial<ModelUIConfig>;
 }
@@ -76,6 +76,7 @@ export interface ResolvedModel {
   providerName: string;
   apiModel: string;
   fallbackModels?: string[];
+  uiPriority: number;
   capabilities: ModelCapabilities;
   ui: ModelUIConfig;
   createAdapter: (options?: AdapterOptions) => AIProvider;
@@ -84,7 +85,6 @@ export interface ResolvedModel {
 // Default capabilities (used when not specified)
 export const DEFAULT_CAPABILITIES: ModelCapabilities = {
   thinking: false,
-  thinkingLevels: [],
   tools: false,
   toolsDuringThinking: false,
   fileUpload: false,

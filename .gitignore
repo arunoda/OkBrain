@@ -52,9 +52,6 @@ Thumbs.db
 data/
 data-test/
 
-# TypeScript build cache
-tsconfig.tsbuildinfo
-
 # Playwright
 test-output.log
 test-results/

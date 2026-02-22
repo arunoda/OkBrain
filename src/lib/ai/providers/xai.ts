@@ -37,10 +37,10 @@ if (process.env.XAI_API_KEY) {
         // When thinking: true  -> grok-4-1-fast-reasoning
         // When thinking: false -> grok-4-1-fast-non-reasoning
         apiModel: 'grok-4-1-fast',
+        uiPriority: 50,
 
         capabilities: {
           thinking: true,  // Supports thinking mode (switches between reasoning/non-reasoning models)
-          thinkingLevels: [], // No configurable levels - it's binary (on/off)
         },
 
         ui: {

@@ -844,6 +844,81 @@ test.describe('Sidebar Layout', () => {
 
 });
 
+test.describe('Multi-Phase Thinking Streaming', () => {
+  test.describe.configure({ mode: 'parallel' });
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('should show a second thinking box when AI thinks again after producing content', async ({ page }) => {
+    test.setTimeout(30000);
+
+    await setupPageWithUser(page);
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Mock /api/chat to return a fake job (no isNewConversation, so no navigation)
+    await page.route('/api/chat', async route => {
+      await route.fulfill({
+        json: { jobId: 'mock-multi-think-job' }
+      });
+    });
+
+    // Mock the SSE stream: think → content → think again → done
+    await page.route('**/api/jobs/mock-multi-think-job/stream**', async route => {
+      const sseEvents = [
+        { kind: 'output', payload: { type: 'init', conversationId: 'mock-conv' } },
+        // Phase 1 thinking
+        { kind: 'thought', payload: { text: 'Phase 1: Let me think about this...' } },
+        // Content starts
+        { kind: 'output', payload: { text: 'Here is my initial answer. ' } },
+        // Phase 2 thinking (re-enters after content)
+        { kind: 'thought', payload: { text: 'Phase 2: Actually I need to reconsider.' } },
+        { kind: 'thought', payload: { text: ' Still thinking in phase 2.' } },
+        { kind: 'thought', payload: { text: ' More phase 2 thoughts.' } },
+        // Final
+        { kind: 'output', payload: { final: true, messageId: 'mock-msg', model: 'Claude Haiku', thinkingDuration: 3 } },
+        { done: true },
+      ];
+
+      const body = sseEvents.map(e => `data: ${JSON.stringify(e)}\n\n`).join('');
+
+      await route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+        body,
+      });
+    });
+
+    // Select Anthropic provider
+    await page.locator('#ai-provider').selectOption('claude-haiku');
+
+    // Send the message
+    const input = page.locator('textarea[placeholder="Ask me anything..."]');
+    await input.fill('Think hard and then think again');
+    await input.press('Enter');
+
+    // Wait for streaming to end (.streaming class is removed when isStreaming becomes false)
+    await expect(page.locator('.message.assistant.streaming')).toHaveCount(0, { timeout: 10000 });
+
+    // Final state: content is visible in the completed message
+    const assistantMessage = page.locator('.message.assistant').last();
+    await expect(assistantMessage).toContainText('Here is my initial answer.');
+
+    // Verify multi-phase thinking: the "Thought for" button should exist,
+    // proving that thinking phases were captured during streaming
+    const thoughtsContainer = assistantMessage.locator('.thoughts-container');
+    await expect(thoughtsContainer).toBeVisible();
+
+    // Click to expand the thoughts panel
+    await thoughtsContainer.getByText(/Thought for/).click();
+
+    // Both phase 1 and phase 2 thoughts should be accumulated and preserved
+    const expandedPanel = thoughtsContainer.locator('.content-styles');
+    await expect(expandedPanel).toBeVisible();
+    await expect(expandedPanel).toContainText('Phase 1');
+    await expect(expandedPanel).toContainText('Phase 2');
+  });
+});
+
 test.describe('User Preferences Persistence', () => {
   test.describe.configure({ mode: 'parallel' });
   test.use({ storageState: { cookies: [], origins: [] } });

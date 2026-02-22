@@ -685,6 +685,76 @@ test.describe('Chat Application', () => {
     // URL should update to a new chat
     await page.waitForURL(/\/chat\/[a-f0-9-]+$/, { timeout: 15000 });
   });
+
+  test('should save and display thumbs up/down feedback', async ({ page }) => {
+    // Setup unique user for this test
+    await setupPageWithUser(page);
+
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Send a message
+    const input = page.locator('textarea[placeholder="Ask me anything..."]');
+    await input.waitFor({ timeout: 10000 });
+    await input.fill('Message for feedback test');
+
+    const responsePromise = waitForApiResponse(page, '/api/chat', 60000);
+    await input.press('Enter');
+    await responsePromise;
+
+    // Wait for the chat to fully complete
+    await waitForChatCompletion(page);
+
+    // Get the assistant message
+    const assistantMessage = page.locator('.message.assistant').first();
+    await assistantMessage.waitFor({ timeout: 15000 });
+
+    // Look for feedback buttons
+    const thumbsUpBtn = assistantMessage.locator('button[title="Good response"]');
+    const thumbsDownBtn = assistantMessage.locator('button[title="Bad response"]');
+
+    await thumbsUpBtn.waitFor({ timeout: 5000 });
+    await thumbsDownBtn.waitFor({ timeout: 5000 });
+
+    // Click thumbs up
+    const feedbackResponsePromise1 = waitForApiResponse(page, /\/api\/messages\/[a-f0-9-]+\/feedback/, 10000);
+    await thumbsUpBtn.click();
+    await feedbackResponsePromise1;
+
+    // Verify it's active
+    await expect(thumbsUpBtn).toHaveClass(/active/);
+    await expect(thumbsDownBtn).not.toHaveClass(/active/);
+
+    // Reload and check persistence
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const reloadedAssistantMsg = page.locator('.message.assistant').first();
+    await reloadedAssistantMsg.waitFor({ timeout: 15000 });
+
+    let activeThumbsUpBtn = reloadedAssistantMsg.locator('button[title="Good response"]');
+    await activeThumbsUpBtn.waitFor({ timeout: 5000 });
+    await expect(activeThumbsUpBtn).toHaveClass(/active/);
+
+    // Click thumbs down
+    const feedbackResponsePromise2 = waitForApiResponse(page, /\/api\/messages\/[a-f0-9-]+\/feedback/, 10000);
+    const reloadedThumbsDownBtn = reloadedAssistantMsg.locator('button[title="Bad response"]');
+    await reloadedThumbsDownBtn.click();
+    await feedbackResponsePromise2;
+
+    // Verify it changed
+    await expect(activeThumbsUpBtn).not.toHaveClass(/active/);
+    await expect(reloadedThumbsDownBtn).toHaveClass(/active/);
+
+    // Click again to unset
+    const feedbackResponsePromise3 = waitForApiResponse(page, /\/api\/messages\/[a-f0-9-]+\/feedback/, 10000);
+    await reloadedThumbsDownBtn.click();
+    await feedbackResponsePromise3;
+
+    // Verify both are inactive
+    await expect(activeThumbsUpBtn).not.toHaveClass(/active/);
+    await expect(reloadedThumbsDownBtn).not.toHaveClass(/active/);
+  });
 });
 
 test.describe('Chat Page URLs', () => {

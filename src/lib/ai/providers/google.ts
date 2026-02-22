@@ -34,7 +34,6 @@ export default defineProvider({
     grounding: true,
     streaming: true,
     thinking: true,
-    thinkingLevels: ['low', 'high'],
     tools: true,
     toolsDuringThinking: false,
   },
@@ -46,6 +45,7 @@ export default defineProvider({
       name: 'Gemini 3 Flash',
       apiModel: process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
       fallbackModels: ['gemini-3-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-latest', 'gemini-1.5-flash'],
+      uiPriority: 100,
 
       capabilities: {
         // All capabilities inherited from baseCapabilities
@@ -61,6 +61,7 @@ export default defineProvider({
       id: 'gemini-pro',
       name: 'Gemini 3.1 Pro',
       apiModel: 'gemini-3.1-pro-preview',
+      uiPriority: 80,
 
       capabilities: {
         // All capabilities inherited from baseCapabilities

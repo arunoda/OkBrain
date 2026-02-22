@@ -65,7 +65,6 @@ This ensures:
 | Capability | Type | Description |
 |------------|------|-------------|
 | `thinking` | boolean | Supports thinking/reasoning mode |
-| `thinkingLevels` | array | Available levels: `['low', 'high']` |
 | `tools` | boolean | Supports tool/function calling |
 | `toolsDuringThinking` | boolean | Can use tools while in thinking mode |
 | `fileUpload` | boolean | Supports file attachments |
@@ -96,7 +95,6 @@ export default defineProvider({
       capabilities: {
         // Override base capabilities if needed
         thinking: true,
-        thinkingLevels: ['low', 'high'],
       },
 
       ui: {

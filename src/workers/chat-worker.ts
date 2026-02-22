@@ -34,7 +34,7 @@ export interface ChatJobInput {
   message: string;
   thinking: boolean;
   mode: ResponseMode;
-  aiProvider: 'gemini' | 'gemini-pro' | 'xai';
+  aiProvider: 'gemini' | 'gemini-pro' | 'xai' | 'claude-sonnet' | 'claude-haiku';
   location?: string;
   documentIds: string[];
   fileData?: AIFileData[];
@@ -202,6 +202,7 @@ async function handleChatJob(job: ClaimedJob, ctx: WorkerContext): Promise<void>
     console.error(`[ChatWorker] Stream error for job ${job.jobId}:`, error);
     let errorMessage = 'Failed to generate response';
     if (error instanceof Error) {
+      console.error(`[ChatWorker] Error type=${error.name} message=${error.message}`);
       // Try to extract a human-readable message from nested JSON errors
       // Gemini API errors can be double-nested: error.message is JSON containing an error.message that is also JSON
       let msg = error.message;
@@ -255,6 +256,7 @@ async function handleChatJob(job: ClaimedJob, ctx: WorkerContext): Promise<void>
 
   // If stream completed but produced no content, treat as error
   if (!fullResponse.trim()) {
+    console.warn(`[ChatWorker] Empty response for job ${job.jobId} — thoughts=${!!allThoughts}, thinkingDuration=${thinkingDuration ?? 'none'}`);
     await ctx.emit('output', {
       final: true,
       error: 'The model returned an empty response. It may be temporarily unavailable — please try again.',

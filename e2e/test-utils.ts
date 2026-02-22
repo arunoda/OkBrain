@@ -60,7 +60,7 @@ export function cleanupTestDb() {
     db.exec('DELETE FROM facts');
     db.exec('DELETE FROM fact_sheets');
     // fact_vec is a sqlite-vec virtual table — only exists if extension is loaded
-    try { db.exec('DELETE FROM fact_vec'); } catch {}
+    try { db.exec('DELETE FROM fact_vec'); } catch { }
     db.exec('DELETE FROM job_queue');
     db.exec('DELETE FROM job_events');
     db.exec('DELETE FROM jobs');
@@ -93,11 +93,16 @@ export function verifyTestDb() {
 }
 
 // Wait for API response
-export async function waitForApiResponse(page: any, urlPattern: string, timeout = 30000) {
+export async function waitForApiResponse(page: any, urlPattern: string | RegExp, timeout = 30000) {
   // Wait for both request and response
   const [response] = await Promise.all([
     page.waitForResponse(
-      (response: any) => response.url().includes(urlPattern) && response.status() < 500,
+      (response: any) => {
+        const match = typeof urlPattern === 'string'
+          ? response.url().includes(urlPattern)
+          : urlPattern.test(response.url());
+        return match && response.status() < 500;
+      },
       { timeout }
     ),
     page.waitForTimeout(100), // Small delay to ensure request starts

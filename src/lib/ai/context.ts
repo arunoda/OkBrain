@@ -125,10 +125,10 @@ export function injectContextMessages(
     });
   }
 
-  // Inject RAG Facts right before conversation messages (cache-friendly position).
-  // All stable context above stays in the cached prefix.
+  // Inject RAG Facts right before the current user message (last position).
+  // This keeps the stable context + conversation history in the cacheable prefix.
   if (context.ragFacts && context.ragFacts.length > 0) {
-    const insertPos = result.length - messages.length;
+    const insertPos = result.length - 1;
     result.splice(insertPos, 0,
       {
         role: 'user' as const,

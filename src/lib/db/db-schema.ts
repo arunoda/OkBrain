@@ -323,10 +323,56 @@ export async function initializeSchema(dbWrapper: DbWrapper) {
       sources TEXT,
       model TEXT,
       was_grounded INTEGER DEFAULT 0,
+      feedback INTEGER CHECK(feedback IN (1, -1)),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
     )
   `);
+
+  // Migration: Add feedback column or migrate from TEXT to INTEGER
+  try {
+    const columns = await dbWrapper.prepare(`PRAGMA table_info(messages)`).all();
+    const feedbackCol = columns.find((col: any) => col.name === 'feedback');
+    if (!feedbackCol) {
+      await dbWrapper.exec(`ALTER TABLE messages ADD COLUMN feedback INTEGER CHECK(feedback IN (1, -1))`);
+    } else if (feedbackCol.type !== 'INTEGER') {
+      // Rebuild table to change feedback from TEXT to INTEGER
+      console.log('[DB] Migrating feedback column from TEXT to INTEGER...');
+      await dbWrapper.exec(`PRAGMA foreign_keys = OFF`);
+      try {
+        await dbWrapper.exec(`
+          CREATE TABLE messages_feedback_mig (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'assistant', 'summary')),
+            content TEXT NOT NULL,
+            sources TEXT,
+            model TEXT,
+            was_grounded INTEGER DEFAULT 0,
+            feedback INTEGER CHECK(feedback IN (1, -1)),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+          )
+        `);
+        await dbWrapper.exec(`
+          INSERT INTO messages_feedback_mig (id, conversation_id, role, content, sources, model, was_grounded, feedback, created_at)
+          SELECT id, conversation_id, role, content, sources, model, was_grounded,
+            CASE feedback WHEN 'like' THEN 1 WHEN 'dislike' THEN -1 ELSE NULL END,
+            created_at FROM messages
+        `);
+        await dbWrapper.exec(`DROP TABLE messages`);
+        await dbWrapper.exec(`ALTER TABLE messages_feedback_mig RENAME TO messages`);
+        await dbWrapper.exec(`
+          CREATE INDEX IF NOT EXISTS idx_messages_conversation
+          ON messages(conversation_id, created_at)
+        `);
+      } finally {
+        await dbWrapper.exec(`PRAGMA foreign_keys = ON`);
+      }
+    }
+  } catch (error: any) {
+    console.warn('Error adding/migrating feedback column on messages:', error);
+  }
 
   // Migration: Update messages table CHECK constraint to include 'summary'
   try {
@@ -345,6 +391,7 @@ export async function initializeSchema(dbWrapper: DbWrapper) {
             sources TEXT,
             model TEXT,
             was_grounded INTEGER DEFAULT 0,
+            feedback INTEGER CHECK(feedback IN (1, -1)),
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
           )
@@ -352,8 +399,8 @@ export async function initializeSchema(dbWrapper: DbWrapper) {
 
         // Copy data
         await dbWrapper.exec(`
-          INSERT INTO messages_new (id, conversation_id, role, content, sources, model, was_grounded, created_at)
-          SELECT id, conversation_id, role, content, sources, model, was_grounded, created_at FROM messages
+          INSERT INTO messages_new (id, conversation_id, role, content, sources, model, was_grounded, feedback, created_at)
+          SELECT id, conversation_id, role, content, sources, model, was_grounded, feedback, created_at FROM messages
         `);
 
         // Drop old table
