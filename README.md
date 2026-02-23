@@ -38,9 +38,8 @@ This project includes agent skills for setup and development. Open it in a codin
 
 ## Support
 
-PRs and issues are not accepted. Use a coding agent.
-
-For security issues, DM [@arunoda](https://x.com/arunoda).
+PRs and issues are not accepted. Use discussions instead.
+It's a bit odd, but [here's why](https://arunoda.me/blog/lets-rethink-prs).
 
 ## License
 
